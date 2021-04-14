@@ -88,6 +88,44 @@ resource "aws_autoscaling_attachment" "graph-rpcadmin" {
   autoscaling_group_name = aws_autoscaling_group.graphnode.name
   depends_on = [aws_lb_listener_rule.graph-rpcadmin]
 }
+######
+###  Port 8030 - Health
+######
+resource "aws_lb_target_group" "graph-health" {
+  name_prefix     = "gn-hlt"
+  port     = "8030"
+  protocol = "HTTP"
+  vpc_id   = local.vpc_id
+  tags = {
+    Name = "${var.app_name}-health"
+  }
+  health_check {
+    healthy_threshold   = 3
+    unhealthy_threshold = 10
+    timeout             = 5
+    interval            = 10
+    path                = "/"
+    port                = 8030
+  }
+}
+resource "aws_autoscaling_attachment" "graph-health" {
+  alb_target_group_arn   = aws_lb_target_group.graph-health.arn
+  autoscaling_group_name = aws_autoscaling_group.graphnode.name
+  depends_on = [aws_lb_listener_rule.graph-health]
+}
+resource "aws_lb_listener_rule" "graph-health" {
+  listener_arn = var.graphql_lb_listener_arn
+  action {
+    target_group_arn = aws_lb_target_group.graph-health.arn
+    type = "forward"
+  }
+  condition {
+    host_header {
+      values = [
+        aws_route53_record.graph-health.fqdn]
+    }
+  }
+}
 
 ######
 ### Port 8040 PROM metrics

@@ -34,3 +34,15 @@ resource "aws_route53_record" "graph-rpcadmin" {
     zone_id = data.aws_lb.index_alb.zone_id
   }
 }
+
+
+resource "aws_route53_record" "graph-health" {
+  name = "${var.app_name}-health"
+  type = "A"
+  zone_id = data.aws_route53_zone.rootzone.zone_id
+  alias {
+    evaluate_target_health = false
+    name = data.aws_lb.graph_alb.dns_name
+    zone_id = data.aws_lb.graph_alb.zone_id
+  }
+}
